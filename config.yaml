@@ -1,0 +1,364 @@
+# ============================================================
+# APEX INDIA — Master Configuration
+# Autonomous Quantitative Trading System v3.0
+# ============================================================
+# IMPORTANT: Never commit secrets (API keys, passwords) here.
+# Use environment variables or a .env file for secrets.
+# ============================================================
+
+# ── System Identity ──────────────────────────────────────────
+system:
+  name: "APEX INDIA"
+  version: "3.0.0"
+  mode: "paper"  # Options: paper | live | backtest
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  timezone: "Asia/Kolkata"
+
+# ── Broker Configuration ─────────────────────────────────────
+broker:
+  primary: "zerodha"  # zerodha | upstox
+  zerodha:
+    api_key: "${ZERODHA_API_KEY}"
+    api_secret: "${ZERODHA_API_SECRET}"
+    # access_token is generated daily via login flow
+    access_token: "${ZERODHA_ACCESS_TOKEN}"
+    request_token: "${ZERODHA_REQUEST_TOKEN}"
+    max_retries: 3
+    retry_delay_seconds: 2
+    rate_limit_per_second: 3  # Kite API limit
+  upstox:
+    api_key: "${UPSTOX_API_KEY}"
+    api_secret: "${UPSTOX_API_SECRET}"
+    access_token: "${UPSTOX_ACCESS_TOKEN}"
+
+# ── Database Configuration ───────────────────────────────────
+database:
+  postgresql:
+    host: "localhost"
+    port: 5432
+    name: "apex_india"
+    user: "${DB_USER}"
+    password: "${DB_PASSWORD}"
+    pool_size: 10
+    max_overflow: 20
+    echo: false  # SQL query logging (set true for debug)
+  redis:
+    host: "localhost"
+    port: 6379
+    db: 0
+    password: "${REDIS_PASSWORD}"
+    decode_responses: true
+    socket_timeout: 5
+  influxdb:
+    url: "http://localhost:8086"
+    token: "${INFLUXDB_TOKEN}"
+    org: "apex_india"
+    bucket: "market_data"
+
+# ── Market Configuration ─────────────────────────────────────
+market:
+  exchanges:
+    - NSE
+    - BSE
+  segments:
+    - EQUITY
+    - FNO
+    - MCX
+  trading_hours:
+    pre_open_start: "09:00"
+    market_open: "09:15"
+    market_close: "15:30"
+    post_close: "16:00"
+  observation_windows:
+    opening_range_minutes: 15  # First 15 minutes for ORB
+    no_entry_before: "09:30"   # Skip first 15 min volatility
+    no_entry_after: "15:00"    # No new entries in last 30 min
+    intraday_exit_by: "15:15"  # Close all intraday by this time
+  optimal_entry_windows:
+    - start: "09:30"
+      end: "11:00"
+      label: "Morning Trend Establishment"
+      priority: 1
+    - start: "13:00"
+      end: "14:30"
+      label: "Post-Lunch Momentum"
+      priority: 2
+
+# ── Universe Screening ───────────────────────────────────────
+universe:
+  min_market_cap_crores: 5000
+  min_avg_volume: 500000
+  exclude_circuit_stocks: true
+  exclude_fno_ban: true
+  rs_vs_nifty_min: 1.0
+  fundamental_score_min: 50
+  max_candidates_per_scan: 50
+  indices:
+    primary:
+      - "NIFTY 50"
+      - "NIFTY BANK"
+    secondary:
+      - "NIFTY MIDCAP 150"
+      - "NIFTY 200"
+    sectors:
+      - "NIFTY IT"
+      - "NIFTY BANK"
+      - "NIFTY AUTO"
+      - "NIFTY PHARMA"
+      - "NIFTY FMCG"
+      - "NIFTY METAL"
+      - "NIFTY REALTY"
+      - "NIFTY ENERGY"
+      - "NIFTY INFRA"
+
+# ── Risk Management ──────────────────────────────────────────
+risk:
+  position:
+    max_risk_per_trade_pct: 0.01       # 1% of portfolio per trade
+    max_single_stock_exposure: 0.08    # 8% max in one stock
+    max_sector_exposure: 0.25          # 25% max in one sector
+    max_correlated_exposure: 0.40      # 40% in high-corr basket
+    max_concurrent_intraday: 10
+    max_concurrent_swing: 8
+    min_risk_reward: 2.0               # 1:2 minimum RR
+    cash_buffer_min: 0.15              # Always keep 15% cash
+  stop_loss:
+    atr_multiplier_initial: 1.5        # 1.5x ATR for initial SL
+    atr_multiplier_trailing: 2.0       # 2x ATR trailing
+    atr_multiplier_intraday: 1.0       # Tighter for intraday
+    break_even_at_rr: 1.0              # Move SL to BE at 1:1
+    partial_exit_fraction: 0.33        # Take 33% profit at targets
+  circuit_breakers:
+    daily_loss_limit_pct: 0.025        # 2.5% → halt trading
+    weekly_loss_limit_pct: 0.05        # 5.0% → reduce size 50%
+    monthly_loss_limit_pct: 0.08       # 8.0% → strategy recalib
+    max_drawdown_pct: 0.15             # 15% → complete halt
+    vix_emergency_threshold: 35        # VIX > 35 → exit all
+    vix_caution_threshold: 25          # VIX > 25 → no new longs
+  portfolio:
+    target_beta_min: 0.8
+    target_beta_max: 1.4
+    max_correlation_overlap: 0.7       # Reduce if 3+ at r>0.7
+    min_sector_diversification: 4
+    hedge_threshold_deployed: 0.80     # Hedge when >80% deployed
+    max_pct_of_adv: 0.03               # Max 3% of avg daily vol
+
+# ── Signal Scoring Weights ───────────────────────────────────
+scoring:
+  composite:
+    technical_weight: 0.40
+    fundamental_weight: 0.25
+    derivatives_weight: 0.25
+    sentiment_weight: 0.10
+  technical:
+    trend_alignment: 0.25
+    momentum: 0.20
+    volume_confirmation: 0.20
+    price_action: 0.15
+    indicator_confluence: 0.20
+  fundamental:
+    earnings_quality: 0.30
+    valuation_relative: 0.25
+    institutional_flow: 0.25
+    sector_leadership: 0.20
+  sentiment:
+    news: 0.40
+    analyst_consensus: 0.35
+    social: 0.25
+  derivatives:
+    oi_analysis: 0.40
+    pcr_signal: 0.30
+    iv_environment: 0.30
+  trade_gates:
+    min_confidence_standard: 65
+    min_confidence_large: 75
+    min_timeframe_alignment: 2
+    min_volume_multiplier: 1.5
+    min_risk_reward: 2.0
+    max_vix_for_longs: 25
+    min_breadth_for_longs: 60
+    event_buffer_hours: 48
+
+# ── Strategy Configuration ───────────────────────────────────
+strategies:
+  max_trades_per_session: 3
+  enabled:
+    - trend_momentum_rider
+    - volatility_breakout
+    - vwap_mean_reversion
+    - opening_range_breakout
+    - earnings_momentum
+    - sector_rotation
+    - options_theta_harvest
+    - smc_reversal
+    - gap_trade
+    - swing_positional
+  trend_momentum_rider:
+    ema_pullback: 21
+    rsi_bounce_zone: [40, 50]
+    volume_multiplier: 1.5
+    min_rr: 3.0
+    rs_vs_nifty_min: 1.2
+    position_size_multiplier: 1.5
+  volatility_breakout:
+    bb_squeeze_percentile: 20
+    volume_multiplier: 2.0
+    oi_surge_threshold: 0.15
+    entry_windows:
+      - ["09:20", "11:30"]
+      - ["13:30", "14:45"]
+    confirmation_candles: 2
+  vwap_mean_reversion:
+    vwap_sigma_entry: 2.0
+    vwap_sigma_stop: 2.5
+    rsi_overbought: 70
+    rsi_oversold: 30
+    risk_per_trade: 0.005
+    time_window: ["09:30", "14:00"]
+  opening_range_breakout:
+    range_minutes: 15
+    volume_multiplier: 2.0
+    scale_out_targets: [1.0, 2.0, 3.0]  # Multiples of OR size
+  earnings_momentum:
+    eps_surprise_threshold: 0.15
+    entry_delay_minutes: 60
+    hold_period_days: [3, 7]
+    max_promoter_pledge: 0.20
+  sector_rotation:
+    momentum_lookbacks: [21, 63, 126, 252]  # 1M, 3M, 6M, 12M
+    top_sectors: 3
+    rebalance_day: "Monday"
+    rebalance_week: 1  # First week of month
+  options_theta_harvest:
+    iv_rank_min: 50
+    delta_neutral_threshold: 0.15
+    max_loss_per_trade: 0.02
+    weekly_target: [0.005, 0.01]
+    close_before_expiry_days: 2
+  smc_reversal:
+    preferred_instruments:
+      - "BANKNIFTY"
+      - "HDFCBANK"
+      - "RELIANCE"
+      - "INFY"
+  gap_trade:
+    min_gap_pct: 0.005
+    entry_candle_wait: 1  # Wait for 5-min candle
+    stop_atr_multiplier: 0.5
+  swing_positional:
+    rs_min: 1.15
+    fundamental_score_min: 60
+    fibonacci_targets: [1.272, 1.618]
+    stop_ema: 21
+    max_concurrent: 8
+    risk_per_trade: 0.01
+
+# ── ML Model Configuration ──────────────────────────────────
+models:
+  price_classifier:
+    type: "ensemble"  # LightGBM + XGBoost
+    features_count: 150
+    target_horizon_days: 5
+    training_window_years: 2
+    retrain_frequency: "weekly"
+    min_sharpe: 1.5
+    min_accuracy: 0.58
+  volatility_predictor:
+    type: "garch_lstm"
+    forecast_horizon_days: 5
+    garch_order: [1, 1]
+    lstm_hidden_size: 64
+    lstm_num_layers: 2
+  regime_classifier:
+    type: "hmm_rf"
+    num_states: 4
+    update_frequency: "daily"
+    features:
+      - returns
+      - volatility
+      - volume
+      - breadth
+      - sentiment
+  entry_timing:
+    type: "dqn"
+    state_features: 50
+    actions: ["enter_now", "wait_5min", "wait_15min", "skip"]
+    training_data_years: 3
+    reward_horizon: ["1h", "1d"]
+  sentiment:
+    type: "finbert"
+    model_name: "ProsusAI/finbert"
+    max_length: 512
+    batch_size: 16
+
+# ── Backtesting Configuration ────────────────────────────────
+backtesting:
+  min_history_years: 5
+  brokerage_per_leg: 0.0003         # 0.03%
+  stt_delivery: 0.001               # 0.1%
+  stt_intraday: 0.00025             # 0.025%
+  slippage_range: [0.0005, 0.0015]  # 0.05% to 0.15%
+  market_impact_range: [0.0002, 0.001]
+  latency_ms_range: [50, 200]
+  performance_thresholds:
+    min_cagr: 0.20
+    min_sharpe: 1.5
+    min_sortino: 2.0
+    max_drawdown: 0.15
+    min_win_rate: 0.45
+    min_profit_factor: 1.8
+    min_recovery_factor: 3.0
+    min_trades: 200
+  monte_carlo_runs: 10000
+  walk_forward_oos_months: 3
+  max_train_test_divergence: 0.20
+
+# ── Dashboard Configuration ──────────────────────────────────
+dashboard:
+  host: "localhost"
+  port: 8501
+  refresh_interval_seconds: 30
+  theme: "dark"
+  pages:
+    - "Live Trading"
+    - "Portfolio"
+    - "Signals"
+    - "Backtesting"
+    - "Settings"
+
+# ── Alerts Configuration ─────────────────────────────────────
+alerts:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+    send_signals: true
+    send_executions: true
+    send_pnl_hourly: true
+    send_eod_summary: true
+    send_circuit_breaker: true
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    sender: "${EMAIL_SENDER}"
+    password: "${EMAIL_PASSWORD}"
+    recipients:
+      - "${EMAIL_RECIPIENT}"
+  sms:
+    enabled: false
+    twilio_sid: "${TWILIO_SID}"
+    twilio_token: "${TWILIO_TOKEN}"
+    from_number: "${TWILIO_FROM}"
+    to_number: "${TWILIO_TO}"
+
+# ── Scheduling ───────────────────────────────────────────────
+scheduler:
+  data_refresh_interval_seconds: 60
+  signal_computation_interval_seconds: 60
+  position_monitor_interval_seconds: 60
+  regime_check_interval_minutes: 15
+  model_update: "16:30"           # After market close
+  daily_report: "16:00"
+  weekly_review: "Saturday 10:00"
+  monthly_analysis: "1st 10:00"
