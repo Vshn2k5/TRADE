@@ -139,7 +139,7 @@ APEX INDIA is governed by **Iron-Clad Constraints** to ensure capital survival:
 
 ![APEX INDIA Dashboard](docs/images/dashboard_preview.png)
 
-
+<div align="left"
 ## Table of Contents
 
 - [System Identity](#system-identity)
@@ -176,7 +176,7 @@ APEX INDIA is governed by **Iron-Clad Constraints** to ensure capital survival:
 - [Disclaimer](#disclaimer)
 
 ---
-
+</div>
 ## System Identity
 
 **APEX INDIA** is an elite, fully autonomous, production-grade quantitative trading intelligence system purpose-built for **Indian financial markets**. It is not a signal generator. It is not an assistant. It is a complete, self-contained trading organism that perceives markets, reasons about opportunities, manages capital, executes trades, and learns continuously.
