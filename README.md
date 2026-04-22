@@ -139,26 +139,6 @@ APEX INDIA is governed by **Iron-Clad Constraints** to ensure capital survival:
 
 ![APEX INDIA Dashboard](docs/images/dashboard_preview.png)
 
-</div>
-
-<div align="center">
-
-# APEX INDIA
-
-### Autonomous Quantitative Trading Intelligence
-
-**BSE Sensex &middot; Nifty 50 &middot; F&O Derivatives &middot; MCX Commodities**
-
-![Version](https://img.shields.io/badge/version-3.0.0-blue?style=for-the-badge)
-![Python](https://img.shields.io/badge/python-3.11+-green?style=for-the-badge&logo=python&logoColor=white)
-![License](https://img.shields.io/badge/license-Proprietary-red?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-Active_Development-yellow?style=for-the-badge)
-
-*"The market rewards patience, punishes greed, and destroys those without a plan."*
-
----
-
-</div>
 
 ## Table of Contents
 
