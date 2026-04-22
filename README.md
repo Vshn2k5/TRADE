@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # APEX INDIA
 
@@ -941,4 +941,3 @@ This is a proprietary quantitative trading system. Contribution guidelines:
 *v3.0.0 | April 2026*
 
 </div>
-]]>
