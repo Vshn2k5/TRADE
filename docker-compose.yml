@@ -1,0 +1,104 @@
+# APEX INDIA — Docker Compose
+# ==============================
+# Production deployment stack:
+#   - apex: Main trading application
+#   - postgres: Primary database
+#   - redis: Real-time caching
+
+version: "3.9"
+
+services:
+  # ─────────────────────────────────────
+  # Main Trading Application
+  # ─────────────────────────────────────
+  apex:
+    build: .
+    container_name: apex-india
+    restart: unless-stopped
+    environment:
+      - SYSTEM_MODE=paper
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=apex_india
+      - DB_USER=${DB_USER:-apex}
+      - DB_PASSWORD=${DB_PASSWORD:-apex_secure_2026}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ZERODHA_API_KEY=${ZERODHA_API_KEY:-}
+      - ZERODHA_API_SECRET=${ZERODHA_API_SECRET:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./models:/app/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "8501:8501"   # Streamlit dashboard
+    networks:
+      - apex-network
+
+  # ─────────────────────────────────────
+  # PostgreSQL Database
+  # ─────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: apex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: apex_india
+      POSTGRES_USER: ${DB_USER:-apex}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-apex_secure_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U apex"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - apex-network
+
+  # ─────────────────────────────────────
+  # Redis Cache
+  # ─────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: apex-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - apex-network
+
+  # ─────────────────────────────────────
+  # Streamlit Dashboard (optional separate)
+  # ─────────────────────────────────────
+  dashboard:
+    build: .
+    container_name: apex-dashboard
+    restart: unless-stopped
+    command: ["streamlit", "run", "apex_india/dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    environment:
+      - PYTHONPATH=/app
+    ports:
+      - "8502:8501"
+    networks:
+      - apex-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  apex-network:
+    driver: bridge

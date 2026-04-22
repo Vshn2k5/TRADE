@@ -1,1 +1,1 @@
-# apex_india/alerts/__init__.py
+# APEX INDIA — Alerts Package

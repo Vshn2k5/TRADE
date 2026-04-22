@@ -1,1 +1,1 @@
-# apex_india/strategies/smc/__init__.py
+# APEX INDIA — SMC Strategies

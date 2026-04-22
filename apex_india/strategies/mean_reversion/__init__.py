@@ -1,1 +1,1 @@
-# apex_india/strategies/mean_reversion/__init__.py
+# APEX INDIA — Mean Reversion Strategies
